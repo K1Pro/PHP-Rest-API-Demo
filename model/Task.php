@@ -10,7 +10,7 @@ class Task {
     private $_deadline;
     private $_completed;
 
-    public function __contruct($id, $title, $description, $deadline, $_completed) {
+    public function __construct($id, $title, $description, $deadline, $completed) {
         $this->setID($id);
         $this->setTitle($title);
         $this->setDescription($description);
@@ -39,7 +39,7 @@ class Task {
     }
 
     public function setID($id) {
-        if(($id !== null ) && (!is_numberic($id) || $id <= 0 || $id > 9223372036854775807 || $this->_id !== null)){
+        if(($id !== null ) && (!is_numeric($id) || $id <= 0 || $id > 9223372036854775807 || $this->_id !== null)){
             throw new TaskException('Task ID error');
         }
         $this->_id = $id;
@@ -61,7 +61,7 @@ class Task {
 
     public function setDeadline($deadline) {
         if(($deadline !== null) && date_format(date_create_from_format('d/m/Y H:i', $deadline), 'd/m/Y H:i') != $deadline) {
-            throw new TaskException('Task deadline date time error')
+            throw new TaskException('Task deadline date time error');
         }
         $this->_deadline = $deadline;
     }
