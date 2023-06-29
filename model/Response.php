@@ -14,7 +14,7 @@
         }
 
         public function setHttpStatusCode($httpStatusCode) {
-            $this->_httpStatusCode = $_httpStatusCode;
+            $this->_httpStatusCode = $httpStatusCode;
         }
 
         public function addMessage($message) {

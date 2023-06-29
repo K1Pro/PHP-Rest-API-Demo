@@ -5,3 +5,5 @@
 
 # production
 /not working
+/archive
+/controller/db.php
