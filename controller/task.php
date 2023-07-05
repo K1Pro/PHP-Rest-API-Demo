@@ -330,6 +330,35 @@
         } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             try {
+                if($_SERVER['CONTENT_TYPE'] !== 'application/json') {
+                    $response = new Response();
+                    $response->setHttpStatusCode(400);
+                    $response->setSuccess(false);
+                    $response->addMessage('Content type header is not set to JSON');
+                    $response->send();
+                    exit;
+                }
+
+                $rawPOSTDATA = file_get_contents('php://input');
+
+                if(!$jsonData = json_decode($rawPOSTDATA)){
+                    $response = new Response();
+                    $response->setHttpStatusCode(400);
+                    $response->setSuccess(false);
+                    $response->addMessage('Request body is not valid JSON');
+                    $response->send();
+                    exit;
+                }
+
+                    if(!isset($jsonData->title) || !isset($jsonData->completed)) {
+                        $response = new Response();
+                        $response->setHttpStatusCode(400);
+                        $response->setSuccess(false);
+                        (!isset($jsonData->title) ? $response->addMessage('Title field is mandatory and must be provided') : false);
+                        (!isset($jsonData->completed) ? $response->addMessage('Completed field is mandatory and must be provided') : false);
+                        $response->send();
+                        exit;
+                    }
 
             }
             catch(TaskException $ex) {
