@@ -329,6 +329,27 @@
 
         } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
+            try {
+
+            }
+            catch(TaskException $ex) {
+                $response = new Response();
+                $response->setHttpStatusCode(400);
+                $response->setSuccess(false);
+                $response->addMessage($ex->getMessage());
+                $response->send();
+                exit;
+            }
+            catch(PDOException $ex){
+                error_log('Database query error -'.$ex, 0);
+                $response = new Response();
+                $response->setHttpStatusCode(500);
+                $response->setSuccess(false);
+                $response->addMessage('Failed to insert task into database - check submitted data for errors');
+                $response->send();
+                exit;
+            }
+
         } else {
             $response = new Response();
             $response->setHttpStatusCode(405);
