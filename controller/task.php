@@ -339,9 +339,9 @@
                     exit;
                 }
 
-                $rawPOSTDATA = file_get_contents('php://input');
+                $rawPOSTData = file_get_contents('php://input');
 
-                if(!$jsonData = json_decode($rawPOSTDATA)){
+                if(!$jsonData = json_decode($rawPOSTData)){
                     $response = new Response();
                     $response->setHttpStatusCode(400);
                     $response->setSuccess(false);
@@ -385,7 +385,7 @@
                     exit;
                 }
                 
-                $lastTaskID = $writeDB->lastInsertID();
+                $lastTaskID = $writeDB->lastInsertId();
 
                 $query = $writeDB->prepare('select id, title, description, DATE_FORMAT(deadline, "%d/%m/%Y %H:%i") as deadline, completed from tbltasks where id = :taskid');
                 $query->bindParam(':taskid', $lastTaskID, PDO::PARAM_INT);
@@ -414,7 +414,7 @@
                 $returnData['rows_returned'] = $rowCount;
                 $returnData['tasks'] = $taskArray;
                 
-                $reponse = new Response();
+                $response = new Response();
                 $response->setHttpStatusCode(201);
                 $response->setSuccess(true);
                 $response->addMessage('Task created');
