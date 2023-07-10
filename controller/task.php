@@ -163,7 +163,7 @@
                     $queryFields .= 'completed = :completed, ';
                 }
 
-                $queryFields = rtrim($queryFields, ', ');
+                $queryFields = rtrim($queryFields, ", ");
 
                 if($title_updated === false && $description_updated === false && $deadline_updated === false && $completed_updated === false){
                     $response = new Response();
@@ -193,7 +193,7 @@
                     $task = new Task($row['id'], $row['title'], $row['description'], $row['deadline'], $row['completed']);
                 }
 
-                $queryString = "update tbltasks set ".$queryfields." where id = :taskid";
+                $queryString = "update tbltasks set ".$queryFields." where id = :taskid";
                 $query = $writeDB->prepare($queryString);
 
                 if($title_updated === true){
@@ -234,6 +234,39 @@
                     exit;
                 }
 
+                $query = $writeDB->prepare('select id, title, description, DATE_FORMAT(deadline, "%d/%m/%Y %H:%i") as deadline, completed from tbltasks where id = :taskid');
+                $query->bindParam(':taskid', $taskid, PDO::PARAM_INT);
+                $query->execute();
+
+                $rowCount = $query->rowCount();
+
+                if($rowCount === 0) {
+                    $response = new Response();
+                    $response->setHttpStatusCode(404);
+                    $response->setSuccess(false);
+                    $response->addMessage('No task found after update');
+                    $response->send();
+                    exit;
+                }
+
+                $taskArray = array();
+                
+                while($row = $query->fetch(PDO::FETCH_ASSOC)) {
+                    $task = new Task($row['id'], $row['title'], $row['description'], $row['deadline'], $row['completed']);
+                    $taskArray[] = $task->returnTaskAsArray();
+                }
+
+                $returnData = array();
+                $returnData['rows_returned'] = $rowCount;
+                $returnData['tasks'] = $taskArray;
+
+                $response = new Response();
+                $response->setHttpStatusCode(200);
+                $response->setSuccess(true);
+                $response->addMessage('Task updated');
+                $response->setData($returnData);
+                $response->send();
+                exit;
             }
             catch(TaskException $ex){
                 $response = new Response();
