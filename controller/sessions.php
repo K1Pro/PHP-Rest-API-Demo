@@ -141,14 +141,56 @@ else if(empty($_GET)){
         $access_token_expiry_seconds = 1200;
         $refresh_token_expiry_seconds = 1209600;
 
-
-
     }
     catch(PDOException $ex){
         $response = new Response();
         $response->setHttpStatusCode(500);
         $response->setSuccess(false);
         $response->addMessage('There was an issue logging in');
+        $response->send();
+        exit;
+    }
+
+    try {
+        $writeDB->beginTransaction();
+
+        $query = $writeDB->prepare('update tblusers set loginattempts = 0 where id = :id');
+        $query->bindParam(':id', $returned_id, PDO::PARAM_INT);
+        $query->execute();
+
+        $query = $writeDB->prepare('insert into tblsessions (userid, accesstoken, accesstokenexpiry, refreshtoken, refreshtokenexpiry) values (:userid, :accesstoken, date_add(NOW(), INTERVAL :accesstokenexpiryseconds SECOND), :refreshtoken, date_add(NOW(), INTERVAL :refreshtokenexpiryseconds SECOND))');
+        $query->bindParam(':userid', $returned_id, PDO::PARAM_INT);
+        $query->bindParam(':accesstoken', $accesstoken, PDO::PARAM_STR);
+        $query->bindParam(':accesstokenexpiryseconds', $access_token_expiry_seconds, PDO::PARAM_INT);
+        $query->bindParam(':refreshtoken', $refreshtoken, PDO::PARAM_STR);
+        $query->bindParam(':refreshtokenexpiryseconds', $refresh_token_expiry_seconds, PDO::PARAM_INT);
+        $query->execute();
+
+        $lastSessionID = $writeDB->lastInsertId();
+
+        $writeDB->commit();
+
+        $returnData = array();
+        $returnData['session_id'] = intval($lastSessionID);
+        $returnData['access_token'] = $accesstoken;
+        $returnData['access_token_expires_in'] = $access_token_expiry_seconds;
+        $returnData['refresh_token'] = $refreshtoken;
+        $returnData['refresh_token_expires_in'] = $refresh_token_expiry_seconds;
+
+        $response = new Response();
+        $response->setHttpStatusCode(201);
+        $response->setSuccess(true);
+        $response->setData($returnData);
+        $response->send();
+        exit;
+
+    }
+    catch(PDOException $ex) {
+        $writeDB->rollBack();
+        $response = new Response();
+        $response->setHttpStatusCode(500);
+        $response->setSuccess(false);
+        $response->addMessage('There was an issue logging in - please try again');
         $response->send();
         exit;
     }
