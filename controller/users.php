@@ -75,8 +75,20 @@
     $password = $jsonData->password;
 
     try {
+        $query = $writeDB->prepare('select id from tblusers where username = :username');
+        $query->bindParam(':username', $username, PDO::PARAM_STR);
+        $query->execute();
 
-        //finished at 22:00 of 024POST video
+        $rowCount = $query->rowCount();
+        
+        if($rowCount !== 0) {
+            $response = new Response();
+            $response->setHttpStatusCode(409);
+            $response->setSuccess(false);
+            $response->addMessage('Username already exists');
+            $response->send();
+            exit;
+        }
 
     }
     catch(PDOException $ex) {
