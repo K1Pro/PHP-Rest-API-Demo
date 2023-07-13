@@ -56,6 +56,7 @@
         exit;
     }
 
+    // you can insert more password checks here, such as one uppercase, lowercase and number....
     if(strlen($jsonData->fullname) < 1 || strlen($jsonData->fullname) > 255 || strlen($jsonData->username) < 1 || strlen($jsonData->username) > 255 || strlen($jsonData->password) < 1 || strlen($jsonData->password) > 255){
         $response = new Response();
         $response->setHttpStatusCode(400);
@@ -89,6 +90,41 @@
             $response->send();
             exit;
         }
+
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+        $query = $writeDB->prepare('insert into tblusers (fullname, username, password) values (:fullname, :username, :password)');
+        $query->bindParam(':fullname', $fullname, PDO::PARAM_STR);
+        $query->bindParam(':username', $username, PDO::PARAM_STR);
+        $query->bindParam(':password', $hashed_password, PDO::PARAM_STR);
+        $query->execute();
+
+        $rowCount = $query->rowCount();
+
+        if($rowCount === 0) {
+            $response = new Response();
+            $response->setHttpStatusCode(500);
+            $response->setSuccess(false);
+            $response->addMessage('There was an issue creating a user account - please try again');
+            $response->send();
+            exit;
+        }
+        
+        $lastUserID = $writeDB->lastInsertId();
+
+        $returnData = array();
+        $returnData['user_id'] = $lastUserID;
+        $returnData['fullname'] = $fullname;
+        $returnData['username'] = $username;
+
+        $response = new Response();
+        $response->setHttpStatusCode(201);
+        $response->setSuccess(true);
+        $response->addMessage('User Created');
+        $response->setData($returnData);
+        $response->send();
+        exit;
+
 
     }
     catch(PDOException $ex) {
