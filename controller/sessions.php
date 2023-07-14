@@ -82,6 +82,79 @@ if(array_key_exists("sessionid", $_GET)){
 
     } elseif($_SERVER['REQUEST_METHOD'] === 'PATCH'){
 
+        if($_SERVER['CONTENT_TYPE'] !== 'application/json') {
+            $response = new Response();
+            $response->setHttpStatusCode(400);
+            $response->setSuccess(false);
+            $response->addMessage('Content Type header not set to JSON');
+            $response->send();
+            exit;
+        }
+
+        $rawPatchData = file_get_contents('php://input');
+
+        if(!$jsonData = json_decode($rawPatchData)) {
+            $response = new Response();
+            $response->setHttpStatusCode(400);
+            $response->setSuccess(false);
+            $response->addMessage('Request body is not valid JSON');
+            $response->send();
+            exit;
+        }
+
+        if(!isset($jsonData->refresh_token) || strlen($jsonData->refresh_token) < 1) {
+            $response = new Response();
+            $response->setHttpStatusCode(400);
+            $response->setSuccess(false);
+            (!isset($jsonData->refresh_token) ? $response->addMessage('Refresh token not supplied') : false);
+            (strlen($jsonData->refresh_token) < 1 ? $response->addMessage('Refresh token cannot be blank') : false);
+            $response->send();
+            exit;
+        }
+
+        try {
+
+            $refreshtoken = $jsonData->refresh_token;
+
+            $query = $writeDB->prepare('select tblsessions.id as sessionid, tblsessions.userid as userid, accesstoken, refreshtoken, useractive, loginattempts, accesstokenexpiry, refreshtokenexpiry from tblsessions, tblusers where tblusers.id = tblsessions.userid and tblsessions.id = :sessionid and tblsessions.accesstoken = :accesstoken and tblsessions.refreshtoken = :refreshtoken');
+            $query->bindParam(':sessionid', $sessionid, PDO::PARAM_INT);
+            $query->bindParam(':accesstoken', $accesstoken, PDO::PARAM_STR);
+            $query->bindParam(':refreshtoken', $refreshtoken, PDO::PARAM_STR);
+
+            $rowCount = $query->rowCount();
+
+            if($rowCount === 0) {
+                $response = new Response();
+                $response->setHttpStatusCode(401);
+                $response->setSuccess(false);
+                $response->addMessage('Access token or refresh token is incorrect for session id');
+                $response->send();
+                exit;
+            }
+
+            $row = $query->fetch(PDO::FETCH_ASSOC);
+
+            $returned_sessionid = $row['sessionid'];
+            $returned_userid = $row['userid'];
+            $returned_accesstoken = $row['accesstoken'];
+            $returned_refreshtoken = $row['refreshtoken'];
+            $returned_useractive = $row['useractive'];
+            $returned_loginattempts = $row['loginattempts'];
+            $returned_accesstokenexpiry = $row['accesstokenexpiry'];
+            $returned_refreshtokenexpiry = $row['refreshtokenexpiry'];
+
+            //left off 18:10 in 028Patch video
+
+        }
+        catch(PDOException $ex) {
+            $response = new Response();
+            $response->setHttpStatusCode(500);
+            $response->setSuccess(false);
+            $response->addMessage('There was an issue refreshing access token - please log in again');
+            $response->send();
+            exit;
+        }
+
     } else {
         $response = new Response();
         $response->setHttpStatusCode(405);
