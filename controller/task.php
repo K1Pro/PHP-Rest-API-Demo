@@ -19,6 +19,83 @@
         exit();
     }
 
+    // begin authentication script
+
+    if(!isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION']) || strlen($_SERVER['REDIRECT_HTTP_AUTHORIZATION']) < 1) {
+        $response = new Response();
+        $response->setHttpStatusCode(401);
+        $response->setSuccess(false);
+        (!isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION']) ? $response->addMessage('Access token is missing from the header') : false);
+        (strlen($_SERVER['REDIRECT_HTTP_AUTHORIZATION']) < 1 ? $response->addMessage('Access token cannot be blank') : false);
+        $response->send();
+        exit();
+    }
+
+    $accesstoken = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+
+    try{
+
+        $query = $writeDB->prepare('select userid, accesstokenexpiry, useractive, loginattempts from tblsessions, tblusers where tblsessions.userid = tblusers.id and accesstoken = :accesstoken');
+        $query->bindParam(':accesstoken', $accesstoken, PDO::PARAM_STR);
+        $query->execute();
+        
+        $rowCount = $query->rowCount();
+
+        if ($rowCount === 0) {
+            $response = new Response();
+            $response->setHttpStatusCode(401);
+            $response->setSuccess(false);
+            $response->addMessage('Invalid access token');
+            $response->send();
+            exit();
+        }
+
+        $row = $query->fetch(PDO::FETCH_ASSOC);
+
+        $returned_userid = $row['userid'];
+        $returned_accesstokenexpiry = $row['accesstokenexpiry'];
+        $returned_useractive = $row['useractive'];
+        $returned_loginattempts = $row['loginattempts'];
+
+        if ($returned_useractiv !== 'Y') {
+            $response = new Response();
+            $response->setHttpStatusCode(401);
+            $response->setSuccess(false);
+            $response->addMessage('User account not active');
+            $response->send();
+            exit();
+        }
+
+        if($returned_loginattempts >= 3) {
+            $response = new Response();
+            $response->setHttpStatusCode(401);
+            $response->setSuccess(false);
+            $response->addMessage('User account is currently locked out');
+            $response->send();
+            exit();
+        }
+
+        if (strtotime($returned_accesstokenexpiry) < time()){
+            $response = new Response();
+            $response->setHttpStatusCode(401);
+            $response->setSuccess(false);
+            $response->addMessage('Access token expired');
+            $response->send();
+            exit();
+        }
+    }
+    catch(PDOException $ex) {
+        $response = new Response();
+        $response->setHttpStatusCode(500);
+        $response->setSuccess(false);
+        $response->addMessage('There was an issue authenticating - please try again');
+        $response->send();
+        exit();
+        // finished at 16:00 for 030Add Authentication video
+    }
+
+    // end authentication script
+
     if(array_key_exists('taskid',$_GET)) {
         $taskid = $_GET['taskid'];
 
